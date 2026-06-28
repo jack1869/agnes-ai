@@ -1,0 +1,16 @@
+{
+  "name": "agnes-cli",
+  "version": "1.0.0",
+  "description": "CLI tool for Agnes AI - text, image, video generation & prompt optimization",
+  "type": "module",
+  "bin": {
+    "agnes": "./bin/agnes.cmd"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "ora": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

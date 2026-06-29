@@ -22,11 +22,11 @@ export async function videoCommand(prompt, options) {
     return result;
   }
 
-  const final = await pollVideo(videoId, 3000, (data) => {
+  const final = await pollVideo(videoId, 20000, (data) => {
     if (data.progress !== undefined) {
       process.stdout.write(`\rProgress: ${data.progress}%`);
     }
-  });
+  }, 120000);
 
   process.stdout.write('\n');
   return final;

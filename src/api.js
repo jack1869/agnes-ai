@@ -83,8 +83,9 @@ export async function createVideo({ prompt, model = 'agnes-video-v2.0', width, h
   return response.json();
 }
 
-export async function pollVideo(videoId, interval = 3000, onProgress) {
+export async function pollVideo(videoId, initialInterval = 3000, onProgress, maxInterval = 120000) {
   const key = getApiKey();
+  let interval = initialInterval;
 
   while (true) {
     const response = await fetch(`${BASE_URL.replace('/v1', '')}/agnesapi?video_id=${videoId}`, {
@@ -108,5 +109,6 @@ export async function pollVideo(videoId, interval = 3000, onProgress) {
     }
 
     await new Promise(r => setTimeout(r, interval));
+    interval = Math.min(interval * 2, maxInterval);
   }
 }

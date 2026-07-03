@@ -24,6 +24,9 @@ export function formatOutput(data, format = 'text') {
   if (data.data?.[0]?.b64_json) {
     return '[base64 image data]';
   }
+  if (data.video?.url) {
+    return data.video.url;
+  }
   if (data.video_id) {
     return `Video ID: ${data.video_id}\nStatus: ${data.status || 'queued'}`;
   }

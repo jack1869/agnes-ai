@@ -69,46 +69,91 @@ export async function createVideo({ prompt, model = 'agnes-video-v2.0', width, h
   if (negative_prompt) body.negative_prompt = negative_prompt;
   if (seed !== undefined) body.seed = seed;
 
-  const response = await fetch(`${BASE_URL}/videos`, {
-    method: 'POST',
-    headers: headers(key),
-    body: JSON.stringify(body),
-  });
+  const maxRetries = 10;
+  let interval = 5000;
+  const maxInterval = 60000;
 
-  if (!response.ok) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const response = await fetch(`${BASE_URL}/videos`, {
+      method: 'POST',
+      headers: headers(key),
+      body: JSON.stringify(body),
+    });
+
+    if (response.ok) {
+      return response.json();
+    }
+
     const err = await response.text();
+
+    if ((response.status === 502 || response.status === 503) && attempt < maxRetries) {
+      await new Promise(r => setTimeout(r, interval));
+      interval = Math.min(interval * 2, maxInterval);
+      continue;
+    }
+
     throw new Error(`Video API error ${response.status}: ${err}`);
   }
+}
 
+export async function checkVideoStatus(videoId) {
+  const key = getApiKey();
+  const response = await fetch(`${BASE_URL.replace('/v1', '')}/agnesapi?video_id=${videoId}`, {
+    headers: headers(key),
+  });
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Video status error ${response.status}: ${err}`);
+  }
   return response.json();
 }
 
 export async function pollVideo(videoId, initialInterval = 3000, onProgress, maxInterval = 120000) {
   const key = getApiKey();
   let interval = initialInterval;
+  let retries = 0;
+  const maxRetries = 30;
 
   while (true) {
-    const response = await fetch(`${BASE_URL.replace('/v1', '')}/agnesapi?video_id=${videoId}`, {
-      headers: headers(key),
-    });
+    try {
+      const response = await fetch(`${BASE_URL.replace('/v1', '')}/agnesapi?video_id=${videoId}`, {
+        headers: headers(key),
+      });
 
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`Video poll error ${response.status}: ${err}`);
+      if (response.status === 503 && retries < maxRetries) {
+        retries++;
+        await new Promise(r => setTimeout(r, interval));
+        interval = Math.min(interval * 2, maxInterval);
+        continue;
+      }
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`Video poll error ${response.status}: ${err}`);
+      }
+
+      retries = 0;
+      const data = await response.json();
+
+      if (onProgress) onProgress(data);
+
+      if (data.status === 'completed' || data.status === 'succeeded') {
+        return data;
+      }
+      if (data.status === 'failed') {
+        throw new Error(`Video generation failed: ${data.error || 'Unknown error'}`);
+      }
+
+      await new Promise(r => setTimeout(r, interval));
+      interval = Math.min(interval * 2, maxInterval);
+    } catch (err) {
+      if (err.message?.startsWith('Video poll error') && retries < maxRetries) {
+        retries++;
+        await new Promise(r => setTimeout(r, interval));
+        interval = Math.min(interval * 2, maxInterval);
+        continue;
+      }
+      throw err;
     }
-
-    const data = await response.json();
-
-    if (onProgress) onProgress(data);
-
-    if (data.status === 'completed' || data.status === 'succeeded') {
-      return data;
-    }
-    if (data.status === 'failed') {
-      throw new Error(`Video generation failed: ${data.error || 'Unknown error'}`);
-    }
-
-    await new Promise(r => setTimeout(r, interval));
-    interval = Math.min(interval * 2, maxInterval);
   }
 }

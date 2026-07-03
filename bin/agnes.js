@@ -2,7 +2,7 @@
 
 import { textCommand } from '../src/commands/text.js';
 import { imageCommand } from '../src/commands/image.js';
-import { videoCommand } from '../src/commands/video.js';
+import { videoCommand, videoStatus, listVideoTasks } from '../src/commands/video.js';
 import { optimizeCommand } from '../src/commands/optimize.js';
 import { startInteractive } from '../src/interactive.js';
 import { parseSize, formatOutput } from '../src/utils.js';
@@ -21,6 +21,8 @@ ${chalk.bold('COMMANDS')}
   ${chalk.cyan('text')}       Generate text with agnes-2.0-flash
   ${chalk.cyan('image')}      Generate image with agnes-image-2.1-flash
   ${chalk.cyan('video')}      Generate video with agnes-video-v2.0
+  ${chalk.cyan('video-status')}  Check video generation status by ID
+  ${chalk.cyan('video-list')}    List recent video tasks
   ${chalk.cyan('optimize')}   Optimize a prompt for AI generation
 
 ${chalk.bold('GLOBAL OPTIONS')}
@@ -60,6 +62,7 @@ ${chalk.bold('EXAMPLES')}
   agnes text --stream --system "You are a poet" "Write a poem about AI"
   agnes image "A cat wearing a spacesuit on Mars" --size 1024x768
   agnes video "A drone flying over a futuristic city at sunset"
+  agnes video-status <video_id>
   agnes optimize "a dog running" --for image
   agnes optimize "explain climate change" --for text
 `);
@@ -78,7 +81,7 @@ function parseArgs() {
   }
 
   const command = args[0];
-  const validCommands = ['text', 'image', 'video', 'optimize'];
+  const validCommands = ['text', 'image', 'video', 'video-status', 'video-list', 'optimize'];
   if (!validCommands.includes(command)) {
     console.error(chalk.red(`Unknown command: ${command}`));
     help();
@@ -165,7 +168,7 @@ function parseArgs() {
   }
 
   const prompt = promptParts.join(' ');
-  if (!prompt && command !== 'optimize') {
+  if (!prompt && command !== 'optimize' && command !== 'video-status' && command !== 'video-list') {
     console.error(chalk.red(`Error: <prompt> is required for "${command}" command`));
     process.exit(1);
   }
@@ -194,6 +197,31 @@ async function main() {
         break;
       case 'video':
         result = await videoCommand(prompt, options);
+        break;
+      case 'video-status':
+        if (!prompt) {
+          console.error(chalk.red('Error: <video_id> is required'));
+          console.log(chalk.dim('Usage: agnes video-status <video_id>'));
+          process.exit(1);
+        }
+        result = await videoStatus(prompt);
+        break;
+      case 'video-list':
+        {
+          const tasks = listVideoTasks();
+          if (tasks.length === 0) {
+            console.log(chalk.dim('\n(no recent video tasks)\n'));
+          } else {
+            console.log(chalk.green('\n=== Recent Video Tasks ==='));
+            tasks.slice(0, 10).forEach((t, i) => {
+              console.log(`  ${chalk.cyan(t.videoId)}  ${chalk.dim(t.createdAt)}`);
+              console.log(`  ${chalk.dim(t.prompt.slice(0, 72))}${t.prompt.length > 72 ? chalk.dim('…') : ''}`);
+              if (i < Math.min(tasks.length, 10) - 1) console.log('');
+            });
+            console.log('');
+          }
+        }
+        result = undefined;
         break;
       case 'optimize':
         result = await optimizeCommand(prompt || '', options);

@@ -42,6 +42,8 @@ ${chalk.bold('IMAGE OPTIONS')}
   --size <WxH>            Image size, e.g. 1024x768 (default: 1024x1024)
   --model <name>          Model name (default: agnes-image-2.1-flash)
   --output <path>         Save image to file
+  --image-file <path>     Reference image for img2img generation
+  -i <path>               Shorthand for --image-file
 
 ${chalk.bold('VIDEO OPTIONS')}
   --width <px>            Video width (default: 1920)
@@ -52,6 +54,10 @@ ${chalk.bold('VIDEO OPTIONS')}
   --seed <n>              Random seed for reproducibility
   --no-wait               Return immediately without polling
   --model <name>          Model name (default: agnes-video-v2.0)
+  --image-file <path>     Reference image for img2vid generation
+  -i <path>               Shorthand for --image-file
+  --video-file <path>     Reference video for vid2vid generation
+  -f <path>               Shorthand for --video-file
 
 ${chalk.bold('OPTIMIZE OPTIONS')}
   --for <type>            Target type: text, image, video (default: text)
@@ -61,7 +67,10 @@ ${chalk.bold('EXAMPLES')}
   agnes text "Explain quantum computing in simple terms"
   agnes text --stream --system "You are a poet" "Write a poem about AI"
   agnes image "A cat wearing a spacesuit on Mars" --size 1024x768
+  agnes image "Make it a cyberpunk style" -i input.jpg
   agnes video "A drone flying over a futuristic city at sunset"
+  agnes video "Make it move like this" -i style.png
+  agnes video "Extend this video" -f input.mp4
   agnes video-status <video_id>
   agnes optimize "a dog running" --for image
   agnes optimize "explain climate change" --for text
@@ -154,6 +163,14 @@ function parseArgs() {
       case '--no-wait':
       case '--no_wait':
         options.wait = false;
+        break;
+      case '--image-file':
+      case '-i':
+        options.imageFile = args[++i];
+        break;
+      case '--video-file':
+      case '-f':
+        options.videoFile = args[++i];
         break;
       case '--for':
         options.for = args[++i];

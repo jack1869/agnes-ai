@@ -1,4 +1,5 @@
 import { createVideo, pollVideo, checkVideoStatus } from '../api.js';
+import { readFileAsBase64 } from '../utils.js';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
@@ -46,6 +47,8 @@ export async function videoCommand(prompt, options) {
     frame_rate: options.frameRate,
     negative_prompt: options.negativePrompt,
     seed: options.seed,
+    imageFile: options.imageFile ? readFileAsBase64(options.imageFile) : undefined,
+    videoFile: options.videoFile ? readFileAsBase64(options.videoFile) : undefined,
   });
 
   const videoId = result.video_id;

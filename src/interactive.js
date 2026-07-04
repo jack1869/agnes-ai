@@ -59,9 +59,10 @@ ${chalk.hex('#50fa7b').bold(' ── Commands ──')}
   ${chalk.hex('#d2d2d2')('<text>')}              ${chalk.dim('Send a message (text, keeps context)')}
   ${chalk.hex('#d2d2d2')('/text <msg>')}         ${chalk.dim('Text generation')}
   ${chalk.hex('#d2d2d2')('/input')}               ${chalk.dim('Multi-line input (Ctrl+D=submit, Ctrl+C=cancel)')}
-  ${chalk.hex('#d2d2d2')('/image <prompt>')}     ${chalk.dim('Generate image  [--size WxH]')}
+  ${chalk.hex('#d2d2d2')('/image <prompt>')}     ${chalk.dim('Generate image  [--size WxH] [--image-file/-i P]')}
   ${chalk.hex('#d2d2d2')('/video <prompt>')}     ${chalk.dim('Generate video  [--width W] [--height H]')}
   ${chalk.dim('                     [--frames N] [--fps N] [--neg T] [--no-wait]')}
+  ${chalk.dim('                     [--image-file/-i P] [--video-file/-f P]')}
   ${chalk.hex('#d2d2d2')('/optimize <prompt>')}  ${chalk.dim('Optimize prompt [--for text|image|video]')}
   ${chalk.hex('#d2d2d2')('/system <text>')}      ${chalk.dim('Set system prompt')}
   ${chalk.hex('#d2d2d2')('/model <t> <m>')}      ${chalk.dim('Switch model (text|image|video)')}
@@ -486,7 +487,7 @@ async function handleCommand(rl, state, line) {
     case '/image':
       if (!rest) {
         process.stdout.write('\n');
-        console.log(chalk.hex('#f1fa8c')('  ⚠') + ' ' + chalk.dim('Usage: /image <prompt> [--size WxH]'));
+        console.log(chalk.hex('#f1fa8c')('  ⚠') + ' ' + chalk.dim('Usage: /image <prompt> [--size WxH] [--image-file/-i P]'));
         process.stdout.write('\n');
         break;
       }
@@ -639,6 +640,14 @@ function parseOptions(rest) {
       case '--seed':
         options.seed = parseInt(parts[++i]);
         break;
+      case '--image-file':
+      case '-i':
+        options.imageFile = parts[++i];
+        break;
+      case '--video-file':
+      case '-f':
+        options.videoFile = parts[++i];
+        break;
       default:
         promptParts.push(parts[i]);
     }
@@ -668,6 +677,7 @@ async function handleImage(rl, state, rest) {
     const result = await imageCommand(opts.prompt, {
       model: opts.model || state.settings.imageModel,
       size: opts.size || '1024x1024',
+      imageFile: opts.imageFile,
     });
 
     const output = formatOutput(result);
@@ -709,6 +719,8 @@ async function handleVideo(rl, state, rest) {
       numFrames: opts.numFrames,
       frameRate: opts.frameRate,
       negativePrompt: opts.negativePrompt,
+      imageFile: opts.imageFile,
+      videoFile: opts.videoFile,
       wait: opts.wait !== false,
       onCreated: (id) => {
         process.stdout.write(`\r${' '.repeat(60)}\r`);
@@ -747,9 +759,13 @@ async function handleVideoStatus(rl, state, videoId) {
     console.log(chalk.hex('#50fa7b')('  ── video status ──'));
 
     if (result.status === 'completed' || result.status === 'succeeded') {
-      const url = result.data?.[0]?.url || result.video?.url || result.output?.[0] || '';
+      const url = result.data?.[0]?.url || result.video?.url || result.output?.[0] || result.url || result.video_url || result.download_url || '';
       console.log(`  ${chalk.dim('Status:')} ${chalk.hex('#50fa7b')('✔ completed')}`);
-      if (url) console.log(`  ${chalk.dim('URL:')}    ${chalk.hex('#8be9fd')(url)}`);
+      if (url) {
+        console.log(`  ${chalk.dim('URL:')}    ${chalk.hex('#8be9fd')(url)}`);
+      } else {
+        console.log(`  ${chalk.dim('Raw:')}   ${chalk.yellow(JSON.stringify(result, null, 2))}`);
+      }
     } else if (result.status === 'failed') {
       console.log(`  ${chalk.dim('Status:')} ${chalk.hex('#ff5555')('✗ failed')}`);
       if (result.error) console.log(`  ${chalk.dim('Error:')}  ${result.error}`);

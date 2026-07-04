@@ -40,9 +40,10 @@ export async function chatComplete({ messages, model = 'agnes-2.0-flash', temper
   return data.choices[0].message.content;
 }
 
-export async function generateImage({ prompt, size = '1024x1024', model = 'agnes-image-2.1-flash', output }) {
+export async function generateImage({ prompt, size = '1024x1024', model = 'agnes-image-2.1-flash', output, imageFile }) {
   const key = getApiKey();
   const body = { model, prompt, size };
+  if (imageFile) body.image = imageFile;
 
   const response = await fetch(`${BASE_URL}/images/generations`, {
     method: 'POST',
@@ -59,7 +60,7 @@ export async function generateImage({ prompt, size = '1024x1024', model = 'agnes
   return data;
 }
 
-export async function createVideo({ prompt, model = 'agnes-video-v2.0', width, height, num_frames, frame_rate, negative_prompt, seed }) {
+export async function createVideo({ prompt, model = 'agnes-video-v2.0', width, height, num_frames, frame_rate, negative_prompt, seed, imageFile, videoFile }) {
   const key = getApiKey();
   const body = { model, prompt };
   if (width) body.width = width;
@@ -68,6 +69,8 @@ export async function createVideo({ prompt, model = 'agnes-video-v2.0', width, h
   if (frame_rate) body.frame_rate = frame_rate;
   if (negative_prompt) body.negative_prompt = negative_prompt;
   if (seed !== undefined) body.seed = seed;
+  if (imageFile) body.image = imageFile;
+  if (videoFile) body.video = videoFile;
 
   const maxRetries = 10;
   let interval = 5000;

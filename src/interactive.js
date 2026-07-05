@@ -666,12 +666,26 @@ async function handleImage(rl, state, rest) {
     return;
   }
 
+  const originalPrompt = opts.prompt;
   process.stdout.write('\n');
+  process.stdout.write(`  ${chalk.dim('✦ Optimizing prompt')}${chalk.dim('...')}`);
+  rl.pause();
+
+  try {
+    const optimized = await optimizeCommand(originalPrompt, { for: 'image' });
+    opts.prompt = optimized;
+    process.stdout.write('\r' + ' '.repeat(60) + '\r');
+    process.stdout.write(chalk.hex('#50fa7b')('  ── optimized ──') + '\n');
+    process.stdout.write(`  ${chalk.dim(optimized)}\n\n`);
+  } catch {
+    process.stdout.write('\r' + ' '.repeat(60) + '\r');
+    process.stdout.write(chalk.hex('#f1fa8c')('  ⚠ ') + chalk.dim('Optimization failed, using original prompt\n\n'));
+  }
+
   process.stdout.write(chalk.hex('#50fa7b').bold(`  ── image ── ${opts.size || '1024x1024'}`) + '\n');
-  process.stdout.write(`  ${opts.prompt}\n\n`);
+  process.stdout.write(`  ${chalk.dim(originalPrompt)}\n\n`);
   const statusMsg = `  ${chalk.dim('✦ Painting')}${chalk.dim('...')}`;
   process.stdout.write(statusMsg);
-  rl.pause();
 
   try {
     const result = await imageCommand(opts.prompt, {
@@ -703,13 +717,27 @@ async function handleVideo(rl, state, rest) {
     return;
   }
 
+  const originalPrompt = opts.prompt;
   process.stdout.write('\n');
+  process.stdout.write(`  ${chalk.dim('✦ Optimizing prompt')}${chalk.dim('...')}`);
+  rl.pause();
+
+  try {
+    const optimized = await optimizeCommand(originalPrompt, { for: 'video' });
+    opts.prompt = optimized;
+    process.stdout.write('\r' + ' '.repeat(60) + '\r');
+    process.stdout.write(chalk.hex('#50fa7b')('  ── optimized ──') + '\n');
+    process.stdout.write(`  ${chalk.dim(optimized)}\n\n`);
+  } catch {
+    process.stdout.write('\r' + ' '.repeat(60) + '\r');
+    process.stdout.write(chalk.hex('#f1fa8c')('  ⚠ ') + chalk.dim('Optimization failed, using original prompt\n\n'));
+  }
+
   const dims = (opts.width || '1920') + 'x' + (opts.height || '1080');
   process.stdout.write(chalk.hex('#50fa7b').bold(`  ── video ── ${dims}`) + '\n');
-  process.stdout.write(`  ${opts.prompt}\n\n`);
+  process.stdout.write(`  ${chalk.dim(originalPrompt)}\n\n`);
   const statusMsg = `  ${chalk.dim('✦ Directing')}${chalk.dim('...')}`;
   process.stdout.write(statusMsg);
-  rl.pause();
 
   try {
     const result = await videoCommand(opts.prompt, {

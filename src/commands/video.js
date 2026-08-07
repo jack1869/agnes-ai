@@ -1,5 +1,5 @@
 import { createVideo, pollVideo, checkVideoStatus } from '../api.js';
-import { readFileAsBase64 } from '../utils.js';
+import { prepareMediaInput, extractUrl, downloadFile, validateVideoParams, readFileAsBase64 } from '../utils.js';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
@@ -33,21 +33,32 @@ export function listVideoTasks() {
   return readTasks();
 }
 
-export async function videoStatus(videoId) {
-  return checkVideoStatus(videoId);
+export async function videoStatus(videoId, modelName) {
+  return checkVideoStatus(videoId, modelName);
+}
+
+function resolveSingleImage(options) {
+  const first = options.imageUrls?.[0] || options.imageFiles?.[0];
+  return first ? prepareMediaInput(first) : undefined;
 }
 
 export async function videoCommand(prompt, options) {
+  validateVideoParams(options);
+
+  const model = options.model || 'agnes-video-v2.0';
   const result = await createVideo({
     prompt,
-    model: options.model || 'agnes-video-v2.0',
+    model,
     width: options.width,
     height: options.height,
     num_frames: options.numFrames,
     frame_rate: options.frameRate,
     negative_prompt: options.negativePrompt,
     seed: options.seed,
-    imageFile: options.imageFile ? readFileAsBase64(options.imageFile) : undefined,
+    motion: options.motion,
+    num_inference_steps: options.steps,
+    image: resolveSingleImage(options),
+    images: (options.keyframes || []).map(prepareMediaInput),
     videoFile: options.videoFile ? readFileAsBase64(options.videoFile) : undefined,
   });
 
@@ -64,12 +75,12 @@ export async function videoCommand(prompt, options) {
   }
 
   try {
-    const final = await pollVideo(videoId, 20000, (data) => {
-      if (data.progress !== undefined) {
-        process.stdout.write(`\rProgress: ${data.progress}%`);
-      }
-    }, 120000);
-    process.stdout.write('\n');
+    const final = await pollVideo(videoId, 3000, options.onProgress, 15000, model === 'agnes-video-v2.0' ? undefined : model);
+    const url = extractUrl(final);
+    if (options.output && url) {
+      const saved = await downloadFile(url, options.output);
+      return { ...final, savedTo: saved };
+    }
     return final;
   } catch (err) {
     throw new Error(`[${videoId}] ${err.message}`);

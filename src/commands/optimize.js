@@ -26,7 +26,7 @@ export async function optimizeCommand(prompt, options) {
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userPrompt },
     ],
-    model: 'agnes-2.0-flash',
+    model: 'agnes-2.5-flash',
     temperature: 0.7,
     max_tokens: 1024,
   });
